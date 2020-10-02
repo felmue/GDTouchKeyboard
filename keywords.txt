@@ -1,0 +1,3 @@
+GDTouchKeyboard KEYWORD3
+GDTK            KEYWORD3
+run             KEYWORD2
