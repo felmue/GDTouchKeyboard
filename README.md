@@ -6,6 +6,6 @@ Touch keyboard for M5Core2.
 
 See example.
 
-## How it looks
+## What does it look like
 
 ![](images/gdtk1.png)
