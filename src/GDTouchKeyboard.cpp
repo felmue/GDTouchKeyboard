@@ -260,6 +260,11 @@ static void _buttonEvent(Event& e)
     _drawKeyboard();
     return;
   }
+  else if(e.button == &M5.background)
+  {
+    // Ignore default background button
+    return;
+  }
   else
   {
     if(String(b.label()) == "shft")
