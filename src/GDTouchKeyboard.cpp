@@ -107,6 +107,13 @@ static void _updateInputText()
   int oitw = M5.Lcd.textWidth(_old_input_text);
   int itw = M5.Lcd.textWidth(_input_text);
 
+  // Hack to work around incorrect width returned by textWidth()
+  //  when space char is at the end of input text
+  if(_input_text.endsWith(" ") != 0)
+  {
+    itw += 14;
+  }
+
   M5.Lcd.setFreeFont(FF2);
   if(_old_input_text != _input_text)
   {
