@@ -27,6 +27,25 @@ public:
   /** Callback used to send a screenshot when requested over Serial. */
   typedef void (*screenshot_handler_t)(void);
 
+  /**
+   * @brief Colours used to render the keyboard.
+   *
+   * The default values match the original GDTouchKeyboard palette.
+   */
+  struct color_scheme_t
+  {
+    uint16_t background = TFT_BLACK;
+    uint16_t inputText = TFT_WHITE;
+    uint16_t promptText = TFT_DARKGREY;
+    uint16_t cursor = 0xC460;
+    uint16_t keyBackground = TFT_BLACK;
+    uint16_t keyBorder = TFT_GREEN;
+    uint16_t keyText = 0xC460;
+    uint16_t controlText = TFT_GREEN;
+  };
+
+  static const uint16_t COLOR_SCHEME_UNCHANGED = 0xFFFF;
+
   /** Create a touch keyboard instance. */
   GDTouchKeyboard();
 
@@ -40,7 +59,9 @@ public:
    * is not included in the returned value and is replaced by user input.
    *
    * @param text Initial input value.
-   * @param setColourIn 16-bit RGB565 colour used for keyboard controls.
+   * @param setColourIn Optional legacy 16-bit RGB565 accent colour used for
+   * keyboard borders and the cursor. Use COLOR_SCHEME_UNCHANGED (the default)
+   * to retain the configured colour scheme.
    * @param getIsEditable If true, the initial value can be edited and deleted.
    * @param fontIn Font used to render the keyboard and input.
    * @param modeIn Initial keyboard mode. Falls back to an available mode when
@@ -49,12 +70,18 @@ public:
    * @param prompt Optional placeholder text shown above the keyboard.
    * @return The value accepted by the user.
    */
-  String run(String text = "", uint16_t setColourIn = 0x0ad9,
+  String run(String text = "", uint16_t setColourIn = COLOR_SCHEME_UNCHANGED,
              bool getIsEditable = true,
              const lgfx::v1::IFont* fontIn = &fonts::Font0,
              key_mode_t modeIn = KEY_MODE_LETTER,
              bool preserveMacSeparators = true,
              String prompt = "");
+
+  /** Set the colours used to render the keyboard. */
+  void setColorScheme(const color_scheme_t& scheme);
+
+  /** Return the colours currently used to render the keyboard. */
+  const color_scheme_t& getColorScheme(void) const;
 
   /** Set the active keyboard mode. */
   void setMode(key_mode_t modeIn);
@@ -154,7 +181,7 @@ private:
 
 
 
-  uint16_t themeColor = 0x0ad9;
+  color_scheme_t _color_scheme;
   String _input_text = "";
   String _old_input_text = "";
   key_mode_t _key_mode = KEY_MODE_LETTER;

@@ -23,6 +23,31 @@ Additional changes:
 - Added the `GDTouchKeyboardValidation` example, demonstrating validated configuration entries, mode restrictions, physical-button navigation, and tactile feedback.
 - Added the `GDTouchKeyboardMac` example, demonstrating fixed-length MAC address entry with tactile feedback.
 
+## Colour Scheme
+
+By default, the keyboard uses the original GDTouchKeyboard colour scheme:
+black keys, green key borders and physical-button labels, ocher key text and
+cursor, and white input text. Configure every displayed colour before calling
+`run()`:
+
+```cpp
+GDTouchKeyboard::color_scheme_t scheme = GDTK.getColorScheme();
+scheme.background = TFT_NAVY;
+scheme.keyBackground = TFT_DARKGREEN;
+scheme.keyBorder = TFT_CYAN;
+scheme.keyText = TFT_WHITE;
+scheme.controlText = TFT_CYAN;
+scheme.inputText = TFT_WHITE;
+scheme.promptText = TFT_LIGHTGREY;
+scheme.cursor = TFT_YELLOW;
+GDTK.setColorScheme(scheme);
+```
+
+The `setColourIn` argument of `run()` remains supported for existing sketches.
+When supplied, it overrides the configured key-border and cursor colours for
+that and subsequent keyboard runs. Omit it, or pass
+`GDTouchKeyboard::COLOR_SCHEME_UNCHANGED`, to retain the configured scheme.
+
 ## Screenshot Capture
 
 The Linux utility [`tools/capture_screenshot.py`](tools/capture_screenshot.py)

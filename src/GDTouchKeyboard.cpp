@@ -21,7 +21,11 @@ String GDTouchKeyboard::run(String text, uint16_t setColourIn,
   isEditable = getIsEditable;
   font = fontIn;
   _preserve_mac_separators = preserveMacSeparators;
-  themeColor = setColourIn;
+  if (setColourIn != COLOR_SCHEME_UNCHANGED)
+  {
+    _color_scheme.keyBorder = setColourIn;
+    _color_scheme.cursor = setColourIn;
+  }
   _initKeyboard(text);
   setMode(modeIn);
   if (_key_mode == KEY_MODE_MAC)
@@ -64,6 +68,16 @@ String GDTouchKeyboard::run(String text, uint16_t setColourIn,
     return _formatMacInput(_input_text);
   }
   return _input_text;
+}
+
+void GDTouchKeyboard::setColorScheme(const color_scheme_t& scheme)
+{
+  _color_scheme = scheme;
+}
+
+const GDTouchKeyboard::color_scheme_t& GDTouchKeyboard::getColorScheme(void) const
+{
+  return _color_scheme;
 }
 
 void GDTouchKeyboard::setMode(key_mode_t modeIn)
@@ -203,23 +217,26 @@ void GDTouchKeyboard::_updateInputText()
   }
 
   const int visibleWidth = M5.Display.textWidth(visibleText);
-  M5.Display.fillRect(0, 0, M5.Display.width(), KEYBOARD_Y - 1, TFT_BLACK);
-  M5.Display.setTextColor(showingPrompt ? TFT_DARKGREY : TFT_WHITE, TFT_BLACK);
+  M5.Display.fillRect(0, 0, M5.Display.width(), KEYBOARD_Y - 1,
+                      _color_scheme.background);
+  M5.Display.setTextColor(showingPrompt ? _color_scheme.promptText
+                                        : _color_scheme.inputText,
+                           _color_scheme.background);
   M5.Display.drawString(visibleText, 0, 10);
-  M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
+  M5.Display.setTextColor(_color_scheme.inputText, _color_scheme.background);
   if (_cursor_state == true && !showingPrompt)
   {
     M5.Display.fillRect(visibleWidth + 2, 2, cursorWidth,
-                       KEYBOARD_Y - 6, themeColor);
+                       KEYBOARD_Y - 6, _color_scheme.cursor);
   }
   _old_input_text = _input_text;
 }
 
 void GDTouchKeyboard::_initKeyboard(String text)
 {
-  M5.Display.fillScreen(TFT_BLACK);
+  M5.Display.fillScreen(_color_scheme.background);
   M5.Display.setTextSize(1);
-  M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
+  M5.Display.setTextColor(_color_scheme.controlText, _color_scheme.background);
   M5.Display.setFont(font);
   M5.Display.setTextDatum(TC_DATUM);
 
@@ -250,7 +267,8 @@ void GDTouchKeyboard::_drawKeyboard()
   if (_key_mode == KEY_MODE_HEX || _key_mode == KEY_MODE_MAC)
   {
     M5.Display.fillRect(KEYBOARD_X + (visibleCols * KEY_W), KEYBOARD_Y,
-                        (COLS - visibleCols) * KEY_W, ROWS * KEY_H, TFT_BLACK);
+                        (COLS - visibleCols) * KEY_W, ROWS * KEY_H,
+                        _color_scheme.background);
   }
 
   for(int r = 0; r < ROWS; r++)
@@ -282,11 +300,12 @@ void GDTouchKeyboard::_drawKeyboard()
           key = String(ch);
         }
       }
-      const uint16_t fillColor = key.length() == 0 ? TFT_BLACK : BLACK;
+      const uint16_t fillColor = key.length() == 0 ? _color_scheme.background
+                                                   : _color_scheme.keyBackground;
       M5.Display.fillRoundRect(x, y, KEY_W, KEY_H, 4, fillColor);
-      M5.Display.drawRoundRect(x, y, KEY_W, KEY_H, 4, themeColor);
+      M5.Display.drawRoundRect(x, y, KEY_W, KEY_H, 4, _color_scheme.keyBorder);
       M5.Display.setFont(font);
-      M5.Display.setTextColor(WHITE, fillColor);
+      M5.Display.setTextColor(_color_scheme.keyText, fillColor);
       M5.Display.setTextSize(key == "SHFT" ? 1 : 2);
       M5.Display.setTextDatum(MC_DATUM);
       M5.Display.drawString(key, x + (KEY_W / 2), y + (KEY_H / 2));
