@@ -24,9 +24,6 @@ public:
   /** Callback used to accept or reject a candidate input string. */
   typedef bool (*input_validator_t)(const String& candidate);
 
-  /** Callback used to send a screenshot when requested over Serial. */
-  typedef void (*screenshot_handler_t)(void);
-
   /**
    * @brief Colours used to render the keyboard.
    *
@@ -107,12 +104,6 @@ public:
 
   /** Enable or disable vibration feedback for touch input. */
   void setTouchFeedback(bool enabled);
-
-  /** Set the callback used to answer serial screenshot requests. */
-  void setScreenshotHandler(screenshot_handler_t handler);
-
-  /** Process pending serial screenshot requests. */
-  void processScreenshotRequest(void);
 
 private:
 
@@ -200,7 +191,6 @@ private:
   bool _touch_feedback = false;
   uint32_t _vibration_stop_at = 0;
   bool _preserve_mac_separators = true;
-  screenshot_handler_t _screenshot_handler = nullptr;
 };
 
 extern GDTouchKeyboard GDTK;

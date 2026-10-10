@@ -96,14 +96,6 @@ static const bool configurationTouchFeedback = true;
 
 #if GDTOUCHKEYBOARD_ENABLE_SCREENSHOT
 static M5SerialPngCapture screenshotCapture(Serial);
-
-static void sendScreenshot()
-{
-  if (!screenshotCapture.captureAndSend(M5.Display))
-  {
-    Serial.println("SCREENSHOT_ERROR");
-  }
-}
 #endif
 
 /**
@@ -208,7 +200,7 @@ static size_t showConfigurationOverview(size_t selectedEntry)
   {
     M5.update();
 #if GDTOUCHKEYBOARD_ENABLE_SCREENSHOT
-    GDTK.processScreenshotRequest();
+    screenshotCapture.handleScreenshotRequest(M5.Display);
 #endif
     if (M5.BtnA.wasClicked())
     {
@@ -263,9 +255,6 @@ void setup()
 {
   M5.begin();
   Serial.begin(115200);
-#if GDTOUCHKEYBOARD_ENABLE_SCREENSHOT
-  GDTK.setScreenshotHandler(sendScreenshot);
-#endif
 }
 
 /**

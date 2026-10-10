@@ -39,7 +39,6 @@ String GDTouchKeyboard::run(String text, uint16_t setColourIn,
   while(_keyboard_done == false)
   {
     M5.update();
-    processScreenshotRequest();
     _processInput();
     if (_vibration_stop_at != 0 &&
         static_cast<int32_t>(millis() - _vibration_stop_at) >= 0)
@@ -132,23 +131,6 @@ void GDTouchKeyboard::setTouchFeedback(bool enabled)
   {
     M5.Power.setVibration(0);
     _vibration_stop_at = 0;
-  }
-}
-
-void GDTouchKeyboard::setScreenshotHandler(screenshot_handler_t handler)
-{
-  _screenshot_handler = handler;
-}
-
-void GDTouchKeyboard::processScreenshotRequest()
-{
-  while (Serial.available() > 0)
-  {
-    if (Serial.read() == 's' && _screenshot_handler != nullptr)
-    {
-      _screenshot_handler();
-      return;
-    }
   }
 }
 

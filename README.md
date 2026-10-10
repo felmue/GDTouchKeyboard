@@ -59,12 +59,9 @@ integration in the `GDTouchKeyboardValidation` example:
 #define GDTOUCHKEYBOARD_ENABLE_SCREENSHOT 1
 ```
 
-The example uses `M5SerialPngCapture` to send the current display over the
-serial connection. GDTouchKeyboard itself does not depend on that library.
+The example uses `M5SerialPngCapture` to send the current display over the serial connection. GDTouchKeyboard itself does not depend on that library.
 
-The M5SerialPngCapture repository includes the Linux utility
-`tools/capture_screenshot.py`, which requests a screenshot and saves the
-received PNG:
+The M5SerialPngCapture repository includes the Linux utility `tools/capture_screenshot.py`, which requests a screenshot and saves the received PNG:
 
 ```text
 python3 -m pip install pyserial
@@ -72,6 +69,4 @@ python3 /path/to/M5SerialPngCapture/tools/capture_screenshot.py \
   --port /dev/ttyACM0 --output screen.png
 ```
 
-The protocol is `PNG1` followed by a 4-byte little-endian PNG length and the
-PNG data. The example services requests while the configuration overview is
-active, while GDTouchKeyboard services them during `GDTK.run()`.
+The protocol is `PNG1` followed by a 4-byte little-endian PNG length and the PNG data. The example services requests while the configuration overview is active.
