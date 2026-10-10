@@ -17,6 +17,10 @@
 #include <M5Unified.h>
 #include <GDTouchKeyboard.h>
 
+#if GDTOUCHKEYBOARD_ENABLE_SCREENSHOT
+#include <M5SerialPngCapture.h>
+#endif
+
 struct ConfigurationEntry
 {
   const char *name;
@@ -91,36 +95,14 @@ static String configurationValues[configurationCount];
 static const bool configurationTouchFeedback = true;
 
 #if GDTOUCHKEYBOARD_ENABLE_SCREENSHOT
-/**
- * @brief Send the current display contents as a PNG over Serial.
- *
- * The frame consists of the `PNG1` marker, a little-endian 32-bit payload
- * length, and the PNG bytes. This can be received by tools/capture_screenshot.py.
- */
+static M5SerialPngCapture screenshotCapture(Serial);
+
 static void sendScreenshot()
 {
-  if (!M5.Display.isReadable())
+  if (!screenshotCapture.captureAndSend(M5.Display))
   {
     Serial.println("SCREENSHOT_ERROR");
-    return;
   }
-
-  size_t pngLength = 0;
-  void *pngData = M5.Display.createPng(
-      &pngLength, 0, 0, M5.Display.width(), M5.Display.height());
-  if (pngData == nullptr)
-  {
-    Serial.println("SCREENSHOT_ERROR");
-    return;
-  }
-
-  Serial.write("PNG1", 4);
-  const uint32_t payloadLength = static_cast<uint32_t>(pngLength);
-  Serial.write(reinterpret_cast<const uint8_t *>(&payloadLength),
-               sizeof(payloadLength));
-  Serial.write(static_cast<const uint8_t *>(pngData), pngLength);
-  Serial.flush();
-  M5.Display.releasePngMemory();
 }
 #endif
 
