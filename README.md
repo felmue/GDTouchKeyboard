@@ -4,11 +4,11 @@ Touch keyboard for M5Unified-compatible ESP32 devices.
 
 ## Contributions
 
-### @ejagombar
+### [@ejagombar](https://github.com/ejagombar)
 
 Modified to allow for custom theming as well as several other improvements.
 
-### @matthias-bs
+### [@matthias-bs](https://github.com/matthias-bs)
 
 Additional changes:
 
