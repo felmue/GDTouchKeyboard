@@ -26,9 +26,8 @@ Additional changes:
 ## Colour Scheme
 
 By default, the keyboard uses the original GDTouchKeyboard colour scheme:
-black keys, green key borders and physical-button labels, ocher key text and
-cursor, and white input text. Configure every displayed colour before calling
-`run()`:
+black keys, ocher key borders and cursor, green key text, input text and green physical-button.
+Configure every displayed colour before calling `run()`:
 
 ```cpp
 GDTouchKeyboard::color_scheme_t scheme = GDTK.getColorScheme();
@@ -47,6 +46,8 @@ The `setColourIn` argument of `run()` remains supported for existing sketches.
 When supplied, it overrides the configured key-border and cursor colours for
 that and subsequent keyboard runs. Omit it, or pass
 `GDTouchKeyboard::COLOR_SCHEME_UNCHANGED`, to retain the configured scheme.
+
+![](images/gdtk1.png)
 
 ## Optional Screenshot Capture
 
