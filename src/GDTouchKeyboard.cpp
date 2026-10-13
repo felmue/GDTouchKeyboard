@@ -36,6 +36,8 @@ String GDTouchKeyboard::run(String text, uint16_t setColourIn,
   _prompt_text = prompt;
   _drawKeyboard();
   _updateInputText();
+  // fix for multiple runs
+  _keyboard_done = false;
   while(_keyboard_done == false)
   {
     M5.update();
@@ -178,7 +180,9 @@ String GDTouchKeyboard::_stripMacSeparators(const String& value) const
 
 void GDTouchKeyboard::_updateInputText()
 {
-  M5.Display.setFont(font);
+  // original font for input text
+  M5.Display.setFont(&fonts::FreeMono12pt7b);
+
   M5.Display.setTextSize(1);
   M5.Display.setTextDatum(TL_DATUM);
 
@@ -204,7 +208,8 @@ void GDTouchKeyboard::_updateInputText()
   M5.Display.setTextColor(showingPrompt ? _color_scheme.promptText
                                         : _color_scheme.inputText,
                            _color_scheme.background);
-  M5.Display.drawString(visibleText, 0, 10);
+  // original font for input text; adapt position
+  M5.Display.drawString(visibleText, 0, 0);
   M5.Display.setTextColor(_color_scheme.inputText, _color_scheme.background);
   if (_cursor_state == true && !showingPrompt)
   {
@@ -284,8 +289,9 @@ void GDTouchKeyboard::_drawKeyboard()
       }
       const uint16_t fillColor = key.length() == 0 ? _color_scheme.background
                                                    : _color_scheme.keyBackground;
-      M5.Display.fillRoundRect(x, y, KEY_W, KEY_H, 4, fillColor);
-      M5.Display.drawRoundRect(x, y, KEY_W, KEY_H, 4, _color_scheme.keyBorder);
+      // original rounded rect form
+      M5.Display.fillRoundRect(x, y, KEY_W, KEY_H, 8, fillColor);
+      M5.Display.drawRoundRect(x, y, KEY_W, KEY_H, 8, _color_scheme.keyBorder);
       M5.Display.setFont(font);
       M5.Display.setTextColor(_color_scheme.keyText, fillColor);
       M5.Display.setTextSize(key == "SHFT" ? 1 : 2);

@@ -32,12 +32,12 @@ public:
   struct color_scheme_t
   {
     uint16_t background = TFT_BLACK;
-    uint16_t inputText = TFT_WHITE;
+    uint16_t inputText = TFT_GREEN;
     uint16_t promptText = TFT_DARKGREY;
     uint16_t cursor = 0xC460;
     uint16_t keyBackground = TFT_BLACK;
-    uint16_t keyBorder = TFT_GREEN;
-    uint16_t keyText = 0xC460;
+    uint16_t keyBorder = 0xC460;
+    uint16_t keyText = TFT_GREEN;
     uint16_t controlText = TFT_GREEN;
   };
 
@@ -69,7 +69,8 @@ public:
    */
   String run(String text = "", uint16_t setColourIn = COLOR_SCHEME_UNCHANGED,
              bool getIsEditable = true,
-             const lgfx::v1::IFont* fontIn = &fonts::Font0,
+             // original font for keys
+             const lgfx::v1::IFont* fontIn = &fonts::FreeMono9pt7b,
              key_mode_t modeIn = KEY_MODE_LETTER,
              bool preserveMacSeparators = true,
              String prompt = "");

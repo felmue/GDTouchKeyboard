@@ -4,6 +4,9 @@
 void setup()
 {
   auto config = M5.config();
+  // enable serial output
+  config.serial_baudrate = 115200;
+
   M5.begin(config);
 }
 
