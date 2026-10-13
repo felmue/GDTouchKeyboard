@@ -32,12 +32,12 @@ public:
   struct color_scheme_t
   {
     uint16_t background = TFT_BLACK;
-    uint16_t inputText = TFT_WHITE;
+    uint16_t inputText = TFT_GREEN;
     uint16_t promptText = TFT_DARKGREY;
     uint16_t cursor = 0xC460;
     uint16_t keyBackground = TFT_BLACK;
-    uint16_t keyBorder = TFT_GREEN;
-    uint16_t keyText = 0xC460;
+    uint16_t keyBorder = 0xC460;
+    uint16_t keyText = TFT_GREEN;
     uint16_t controlText = TFT_GREEN;
   };
 
