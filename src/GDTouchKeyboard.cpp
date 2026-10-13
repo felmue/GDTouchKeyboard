@@ -289,8 +289,9 @@ void GDTouchKeyboard::_drawKeyboard()
       }
       const uint16_t fillColor = key.length() == 0 ? _color_scheme.background
                                                    : _color_scheme.keyBackground;
-      M5.Display.fillRoundRect(x, y, KEY_W, KEY_H, 4, fillColor);
-      M5.Display.drawRoundRect(x, y, KEY_W, KEY_H, 4, _color_scheme.keyBorder);
+      // original rounded rect form
+      M5.Display.fillRoundRect(x, y, KEY_W, KEY_H, 8, fillColor);
+      M5.Display.drawRoundRect(x, y, KEY_W, KEY_H, 8, _color_scheme.keyBorder);
       M5.Display.setFont(font);
       M5.Display.setTextColor(_color_scheme.keyText, fillColor);
       M5.Display.setTextSize(key == "SHFT" ? 1 : 2);
