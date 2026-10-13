@@ -206,7 +206,8 @@ void GDTouchKeyboard::_updateInputText()
   M5.Display.setTextColor(showingPrompt ? _color_scheme.promptText
                                         : _color_scheme.inputText,
                            _color_scheme.background);
-  M5.Display.drawString(visibleText, 0, 10);
+  // original font for input text; adapt position
+  M5.Display.drawString(visibleText, 0, 0);
   M5.Display.setTextColor(_color_scheme.inputText, _color_scheme.background);
   if (_cursor_state == true && !showingPrompt)
   {
