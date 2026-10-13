@@ -178,7 +178,9 @@ String GDTouchKeyboard::_stripMacSeparators(const String& value) const
 
 void GDTouchKeyboard::_updateInputText()
 {
-  M5.Display.setFont(font);
+  // original font for input text
+  M5.Display.setFont(&fonts::FreeMono12pt7b);
+
   M5.Display.setTextSize(1);
   M5.Display.setTextDatum(TL_DATUM);
 
