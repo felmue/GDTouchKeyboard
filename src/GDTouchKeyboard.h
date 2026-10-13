@@ -69,7 +69,8 @@ public:
    */
   String run(String text = "", uint16_t setColourIn = COLOR_SCHEME_UNCHANGED,
              bool getIsEditable = true,
-             const lgfx::v1::IFont* fontIn = &fonts::Font0,
+             // original font for keys
+             const lgfx::v1::IFont* fontIn = &fonts::FreeMono9pt7b,
              key_mode_t modeIn = KEY_MODE_LETTER,
              bool preserveMacSeparators = true,
              String prompt = "");
