@@ -2,72 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 #include "GDTouchKeyboard.h"
-#include <Free_Fonts.h>
-
-#define KEYBOARD_X (2)
-#define KEYBOARD_Y (26)
-
-#define KEY_W (45)
-#define KEY_H (50)
-
-#define COLS (7)
-#define ROWS (4)
-
-#define MAX_SHIFT_MODE (4)
-
-#define COLOR_OCHER (0xC460)
-
-typedef enum
-{
-  KEY_MODE_LETTER = 0,
-  KEY_MODE_NUMBER = 1,
-} key_mode_t;
-
-const char keymap[MAX_SHIFT_MODE][ROWS][COLS] =
-{
-  {
-	{'a', 'b', 'c', 'd', 'e', 'f', 'g'},
-	{'h', 'i', 'j', 'k', 'l', 'm', 'n'},
-	{'o', 'p', 'q', 'r', 's', 't', 'u'},
-	{'v', 'w', 'x', 'y', 'z', ' ', '\002'}, // 002 = shift
-  },
-  {
-	{'A', 'B', 'C', 'D', 'E', 'F', 'G'},
-	{'H', 'I', 'J', 'K', 'L', 'M', 'N'},
-	{'O', 'P', 'Q', 'R', 'S', 'T', 'U'},
-	{'V', 'W', 'X', 'Y', 'Z', ' ', '\002'}, // 002 = shift
-  },
-  {
-	{'`', '1', '2', '3', '4', '5', '6'},
-	{'7', '8', '9', '0', '-', '=', '['},
-	{']', '\\', ';', '\'', ',', '.', '/'},
-	{' ', ' ', ' ', ' ', ' ', ' ', '\002'}, // 002 = shift
-  },
-  {
-	{'~', '!', '@', '#', '$', '%', '^'},
-	{'&', '*', '(', ')', '_', '+', '{'},
-	{'}', '|', ':', '"', '<', '>', '?'},
-	{' ', ' ', ' ', ' ', ' ', ' ', '\002'}, // 002 = shift
-  },
-};
-
-Button *_button_list[ROWS][COLS];
-String _input_text = "";
-String _old_input_text = "";
-key_mode_t _key_mode = KEY_MODE_LETTER;
-bool _shift_mode = false;
-bool _keyboard_done = false;
-uint32_t _cursor_last;
-bool _cursor_state = false;
-ButtonColors _bc_on = {BLUE, GREEN, COLOR_OCHER};
-ButtonColors _bc_off = {BLACK, GREEN, COLOR_OCHER};
-
-static void _updateInputText(void);
-static void _initKeyboard(String text = "");
-static void _deinitKeyboard(void);
-static void _btnAEvent(Event& e);
-static void _buttonEvent(Event& e);
-static void _drawKeyboard(void);
 
 GDTouchKeyboard::GDTouchKeyboard()
 {
@@ -77,14 +11,43 @@ GDTouchKeyboard::~GDTouchKeyboard()
 {
 }
 
-String GDTouchKeyboard::run(String text)
+String GDTouchKeyboard::run(String text, uint16_t setColourIn,
+                            bool getIsEditable,
+                            const lgfx::v1::IFont* fontIn,
+                            key_mode_t modeIn,
+                            bool preserveMacSeparators,
+                            String prompt)
 {
+  isEditable = getIsEditable;
+  font = fontIn;
+  _preserve_mac_separators = preserveMacSeparators;
+  if (setColourIn != COLOR_SCHEME_UNCHANGED)
+  {
+    _color_scheme.keyBorder = setColourIn;
+    _color_scheme.cursor = setColourIn;
+  }
   _initKeyboard(text);
+  setMode(modeIn);
+  if (_key_mode == KEY_MODE_MAC)
+  {
+    _input_text = _stripMacSeparators(_input_text);
+  }
+  promptText = _input_text;
+  _prompt_text = prompt;
   _drawKeyboard();
+  _updateInputText();
+  // fix for multiple runs
   _keyboard_done = false;
   while(_keyboard_done == false)
   {
     M5.update();
+    _processInput();
+    if (_vibration_stop_at != 0 &&
+        static_cast<int32_t>(millis() - _vibration_stop_at) >= 0)
+    {
+      M5.Power.setVibration(0);
+      _vibration_stop_at = 0;
+    }
 
     // Blinking cursor
     if(millis() > _cursor_last)
@@ -98,191 +61,342 @@ String GDTouchKeyboard::run(String text)
   {
     M5.update();
   }
+  M5.Power.setVibration(0);
+  _vibration_stop_at = 0;
   _deinitKeyboard();
+  if (_key_mode == KEY_MODE_MAC && _preserve_mac_separators)
+  {
+    return _formatMacInput(_input_text);
+  }
   return _input_text;
 }
 
-static void _updateInputText()
+void GDTouchKeyboard::setColorScheme(const color_scheme_t& scheme)
 {
-  int oitw = M5.Lcd.textWidth(_old_input_text);
-  int itw = M5.Lcd.textWidth(_input_text);
-
-  // Hack to work around incorrect width returned by textWidth()
-  //  when space char is at the end of input text
-  if(_input_text.endsWith(" ") != 0)
-  {
-    itw += 14;
-  }
-
-  M5.Lcd.setFreeFont(FF2);
-  if(_old_input_text != _input_text)
-  {
-    _old_input_text = _input_text;
-    M5.Lcd.fillRect(0, 0, max(oitw, itw) + 40, KEYBOARD_Y - 1, TFT_BLACK);
-    M5.Lcd.drawString(_input_text, 0, 10);
-  }
-  else
-  {
-    if(_cursor_state == true)
-    {
-      M5.Lcd.fillRect(itw + 2, 2, 15, KEYBOARD_Y - 6, COLOR_OCHER);
-    }
-    else
-    {
-      M5.Lcd.fillRect(itw + 2, 2, 15, KEYBOARD_Y - 6, TFT_BLACK);
-    }
-  }
+  _color_scheme = scheme;
 }
 
-static void _initKeyboard(String text)
+const GDTouchKeyboard::color_scheme_t& GDTouchKeyboard::getColorScheme(void) const
 {
-  M5.Lcd.fillScreen(TFT_BLACK);
-  M5.Lcd.setTextSize(1);
-  M5.Lcd.setTextColor(TFT_GREEN, TFT_BLACK);
-  M5.Lcd.setFreeFont(FF1);
-  M5.Lcd.setTextDatum(TC_DATUM);
+  return _color_scheme;
+}
 
-  // Button A
-  M5.Lcd.drawString("delete", 55, 226, 2);
-  // Button B
-  M5.Lcd.drawString("done", 160, 226, 2);
-  // Button C
-  M5.Lcd.drawString("mode", 265, 226, 2);
-
-  for(int r = 0; r < ROWS; r++)
+void GDTouchKeyboard::setMode(key_mode_t modeIn)
+{
+  if ((_available_modes & (1 << modeIn)) == 0)
   {
-    for(int c = 0; c < COLS; c++)
+    for (uint8_t mode = KEY_MODE_LETTER; mode <= KEY_MODE_MAC; mode++)
     {
-      _button_list[r][c] = new Button(0, 0, 0, 0, false, "", _bc_off, _bc_on);
-      _button_list[r][c]->setTextSize(1);
+      if ((_available_modes & (1 << mode)) != 0)
+      {
+        modeIn = static_cast<key_mode_t>(mode);
+        break;
+      }
     }
   }
-
-  M5.Buttons.addHandler(_buttonEvent, E_TOUCH);
-  M5.Buttons.addHandler(_btnAEvent, E_RELEASE);
-
-  _input_text = text;
-  _key_mode = KEY_MODE_LETTER;
+  _key_mode = modeIn;
   _shift_mode = false;
 }
 
-static void _deinitKeyboard()
+void GDTouchKeyboard::setAvailableModes(uint8_t modeMask)
 {
-  M5.Buttons.delHandlers(_buttonEvent, nullptr, nullptr);
-  M5.Buttons.delHandlers(_btnAEvent, nullptr, nullptr);
-
-  for(int r = 0; r < ROWS; r++)
+  _available_modes = modeMask & ((1 << (KEY_MODE_MAC + 1)) - 1);
+  if (_available_modes == 0)
   {
-    for(int c = 0; c < COLS; c++)
-    {
-      delete(_button_list[r][c]);
-      _button_list[r][c] = NULL;
-    }
+    _available_modes = (1 << KEY_MODE_LETTER) |
+                       (1 << KEY_MODE_NUMBER) |
+                       (1 << KEY_MODE_HEX) |
+                       (1 << KEY_MODE_MAC);
+  }
+  setMode(_key_mode);
+}
+
+void GDTouchKeyboard::setInputLength(uint16_t minLength, uint16_t maxLength)
+{
+  _minimum_length = minLength;
+  _maximum_length = maxLength;
+  if (_maximum_length != 0 && _minimum_length > _maximum_length)
+  {
+    _minimum_length = _maximum_length;
   }
 }
 
-static void _drawKeyboard()
+void GDTouchKeyboard::setInputValidator(input_validator_t validator)
 {
-  int x, y;
+  _input_validator = validator;
+}
+
+void GDTouchKeyboard::setTouchFeedback(bool enabled)
+{
+  _touch_feedback = enabled;
+  if (!enabled)
+  {
+    M5.Power.setVibration(0);
+    _vibration_stop_at = 0;
+  }
+}
+
+bool GDTouchKeyboard::_isValidInput(const String& candidate, bool complete) const
+{
+  const uint16_t length = candidate.length();
+  if ((complete && length < _minimum_length) ||
+      (_maximum_length != 0 && length > _maximum_length))
+  {
+    return false;
+  }
+  return _input_validator == nullptr || _input_validator(candidate);
+}
+
+void GDTouchKeyboard::_startTouchFeedback()
+{
+  if (_touch_feedback)
+  {
+    M5.Power.setVibration(180);
+    _vibration_stop_at = millis() + 80;
+  }
+}
+
+String GDTouchKeyboard::_formatMacInput(const String& value) const
+{
+  String formatted;
+  formatted.reserve(value.length() + (value.length() / 2));
+  for (size_t index = 0; index < value.length(); ++index)
+  {
+    if (index != 0 && (index % 2) == 0)
+    {
+      formatted += ':';
+    }
+    formatted += value[index];
+  }
+  return formatted;
+}
+
+String GDTouchKeyboard::_stripMacSeparators(const String& value) const
+{
+  String stripped = value;
+  stripped.replace(":", "");
+  return stripped;
+}
+
+void GDTouchKeyboard::_updateInputText()
+{
+  // original font for input text
+  M5.Display.setFont(&fonts::FreeMono12pt7b);
+
+  M5.Display.setTextSize(1);
+  M5.Display.setTextDatum(TL_DATUM);
+
+  String visibleText = _key_mode == KEY_MODE_MAC
+                          ? _formatMacInput(_input_text)
+                          : _input_text;
+  const bool showingPrompt = visibleText.length() == 0 && _prompt_text.length() > 0;
+  if (showingPrompt)
+  {
+    visibleText = _prompt_text;
+  }
+  const int cursorWidth = 15;
+  const int availableWidth = M5.Display.width() - cursorWidth - 2;
+  while (visibleText.length() > 0 &&
+         M5.Display.textWidth(visibleText) > availableWidth)
+  {
+    visibleText = visibleText.substring(1);
+  }
+
+  const int visibleWidth = M5.Display.textWidth(visibleText);
+  M5.Display.fillRect(0, 0, M5.Display.width(), KEYBOARD_Y - 1,
+                      _color_scheme.background);
+  M5.Display.setTextColor(showingPrompt ? _color_scheme.promptText
+                                        : _color_scheme.inputText,
+                           _color_scheme.background);
+  // original font for input text; adapt position
+  M5.Display.drawString(visibleText, 0, 0);
+  M5.Display.setTextColor(_color_scheme.inputText, _color_scheme.background);
+  if (_cursor_state == true && !showingPrompt)
+  {
+    M5.Display.fillRect(visibleWidth + 2, 2, cursorWidth,
+                       KEYBOARD_Y - 6, _color_scheme.cursor);
+  }
+  _old_input_text = _input_text;
+}
+
+void GDTouchKeyboard::_initKeyboard(String text)
+{
+  M5.Display.fillScreen(_color_scheme.background);
+  M5.Display.setTextSize(1);
+  M5.Display.setTextColor(_color_scheme.controlText, _color_scheme.background);
+  M5.Display.setFont(font);
+  M5.Display.setTextDatum(TC_DATUM);
+
+  // Button A
+  M5.Display.drawString("Delete", 55, 226);
+  // Button B
+  M5.Display.drawString("Done", 160, 226);
+  // Button C
+  M5.Display.drawString("Mode", 265, 226);
+
+  _input_text = text;
+  _old_input_text = "";
+  _key_mode = KEY_MODE_LETTER;
+  _shift_mode = false;
+  _cursor_state = false;
+  _cursor_last = millis();
+}
+
+void GDTouchKeyboard::_deinitKeyboard()
+{
+}
+
+void GDTouchKeyboard::_drawKeyboard()
+{
+  const int visibleCols = (_key_mode == KEY_MODE_HEX ||
+                           _key_mode == KEY_MODE_MAC) ? 4 : COLS;
+
+  if (_key_mode == KEY_MODE_HEX || _key_mode == KEY_MODE_MAC)
+  {
+    M5.Display.fillRect(KEYBOARD_X + (visibleCols * KEY_W), KEYBOARD_Y,
+                        (COLS - visibleCols) * KEY_W, ROWS * KEY_H,
+                        _color_scheme.background);
+  }
 
   for(int r = 0; r < ROWS; r++)
   {
-    for(int c = 0; c < COLS; c++)
+    for(int c = 0; c < visibleCols; c++)
     {
-      x = (KEYBOARD_X + (c * KEY_W));
-      y = (KEYBOARD_Y + (r * KEY_H));
-      _button_list[r][c]->set(x, y, KEY_W, KEY_H);
+      const int x = KEYBOARD_X + (c * KEY_W);
+      const int y = KEYBOARD_Y + (r * KEY_H);
 
       int key_page = 0;
 
-      if(_key_mode == KEY_MODE_NUMBER) key_page += 2;
-      if(_shift_mode == true) key_page += 1;
+          if(_key_mode == KEY_MODE_NUMBER) key_page += 2;
+          else if(_key_mode == KEY_MODE_HEX || _key_mode == KEY_MODE_MAC)
+            key_page += 4;
+           if(_shift_mode == true && _key_mode != KEY_MODE_HEX &&
+             _key_mode != KEY_MODE_MAC) key_page += 1;
 
       String key;
       char ch = keymap[key_page][r][c];
 
       if(ch == '\002')  // Shift
       {
-        _button_list[r][c]->setFreeFont(FF1);
-        key = "shft";
+        key = "SHFT";
       }
       else
       {
-        _button_list[r][c]->setFreeFont(FF3);
-        key = String(ch);
+        if(ch != '\001')
+        {
+          key = String(ch);
+        }
       }
-      _button_list[r][c]->setLabel(key.c_str());
-      _button_list[r][c]->draw();
+      const uint16_t fillColor = key.length() == 0 ? _color_scheme.background
+                                                   : _color_scheme.keyBackground;
+      // original rounded rect form
+      M5.Display.fillRoundRect(x, y, KEY_W, KEY_H, 8, fillColor);
+      M5.Display.drawRoundRect(x, y, KEY_W, KEY_H, 8, _color_scheme.keyBorder);
+      M5.Display.setFont(font);
+      M5.Display.setTextColor(_color_scheme.keyText, fillColor);
+      M5.Display.setTextSize(key == "SHFT" ? 1 : 2);
+      M5.Display.setTextDatum(MC_DATUM);
+      M5.Display.drawString(key, x + (KEY_W / 2), y + (KEY_H / 2));
     }
   }
 }
 
-static void _btnAEvent(Event& e)
+void GDTouchKeyboard::_processInput()
 {
-  // Delete all (long press) or delete one char (short press)
-  if(e.button == &M5.BtnA)
+  if (M5.BtnA.wasReleasedAfterHold())
   {
-    if(e.duration > 500)
+    _input_text = isEditable ? "" : promptText;
+    _updateInputText();
+  }
+  else if (M5.BtnA.wasClicked())
+  {
+    if (isEditable)
     {
-      _input_text = "";
+      if (_input_text.length() > 0)
+      {
+        _input_text = _input_text.substring(0, _input_text.length() - 1);
+      }
     }
-    else
+    else if (_input_text.length() > promptText.length())
     {
       _input_text = _input_text.substring(0, _input_text.length() - 1);
     }
     _updateInputText();
   }
-}
-
-static void _buttonEvent(Event& e)
-{
-  Button& b = *e.button;
-
-  // Delete
-  if(e.button == &M5.BtnA)
+  else if (M5.BtnB.wasClicked())
   {
-    // Ignore - handled in btnAEvent()
-    return;
-  }
-  // Done
-  else if(e.button == &M5.BtnB)
-  {
-    _keyboard_done = true;
-    return;
-  }
-  // Key mode
-  else if(e.button == &M5.BtnC)
-  {
-    switch(_key_mode)
+    if (_isValidInput(_input_text, true))
     {
-      case KEY_MODE_LETTER:
-        _key_mode = KEY_MODE_NUMBER;
+      _keyboard_done = true;
+    }
+    return;
+  }
+  else if (M5.BtnC.wasClicked())
+  {
+    for (uint8_t offset = 1; offset <= 4; offset++)
+    {
+      const uint8_t mode = (static_cast<uint8_t>(_key_mode) + offset) % 4;
+      if ((_available_modes & (1 << mode)) != 0)
+      {
+        _key_mode = static_cast<key_mode_t>(mode);
         break;
-      default:
-      case KEY_MODE_NUMBER:
-        _key_mode = KEY_MODE_LETTER;
-        break;
+      }
     }
     _shift_mode = false;
     _drawKeyboard();
     return;
   }
-  else if(e.button == &M5.background)
+
+  if (M5.Touch.getCount() == 0)
   {
-    // Ignore default background button
     return;
   }
-  else
+
+  const auto touch = M5.Touch.getDetail();
+  if (!touch.wasPressed())
   {
-    if(String(b.label()) == "shft")
+    return;
+  }
+
+  const int visibleCols = (_key_mode == KEY_MODE_HEX ||
+                           _key_mode == KEY_MODE_MAC) ? 4 : COLS;
+  for (int r = 0; r < ROWS; r++)
+  {
+    for (int c = 0; c < visibleCols; c++)
     {
-      _shift_mode = !_shift_mode;
-      _drawKeyboard();
+      const int x = KEYBOARD_X + (c * KEY_W);
+      const int y = KEYBOARD_Y + (r * KEY_H);
+      if (touch.x < x || touch.x >= x + KEY_W ||
+          touch.y < y || touch.y >= y + KEY_H)
+      {
+        continue;
+      }
+
+      int key_page = 0;
+      if (_key_mode == KEY_MODE_NUMBER) key_page += 2;
+      else if (_key_mode == KEY_MODE_HEX || _key_mode == KEY_MODE_MAC)
+        key_page += 4;
+      if (_shift_mode && _key_mode != KEY_MODE_HEX && _key_mode != KEY_MODE_MAC) key_page += 1;
+
+      const char ch = keymap[key_page][r][c];
+      _startTouchFeedback();
+      if (ch == '\002')
+      {
+        _shift_mode = !_shift_mode;
+        _drawKeyboard();
+      }
+      else if (ch != '\001')
+      {
+        const String candidate = _input_text + String(ch);
+        if (_isValidInput(candidate, false))
+        {
+          _input_text = candidate;
+          _updateInputText();
+        }
+      }
       return;
     }
-    _input_text += b.label();
   }
-  _updateInputText();
 }
 
 GDTouchKeyboard GDTK;
